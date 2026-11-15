@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type", "X-Requested-With"],
+        allow_headers=["Content-Type", "X-Requested-With", "Authorization"],
     )
 
     # Allow a little overhead for multipart framing on top of the file limit.

@@ -6,19 +6,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 
 from app.config import get_settings
-from app.core.auth import CurrentUser, DbSession, require_csrf_header
+from app.core import upload_token
+from app.core.auth import CurrentUser, DbSession, get_current_session, get_current_user, require_csrf_header
 from app.core.rate_limit import limiter
 from app.data import cleaning as C
 from app.data import storage as S
 from app.data.csv_reader import CsvError, read_csv_file, sanitise_filename
 from app.data.sample import SAMPLE_FILENAME, SAMPLE_NAME, SAMPLE_QUESTIONS, generate_sample
 from app.db import get_engine
-from app.models import CleaningOperation, Dataset, DatasetMetadata
+from app.models import CleaningOperation, Dataset, DatasetMetadata, User
 from app.services import datasets as svc
 
 router = APIRouter(prefix="/datasets", tags=["datasets"], dependencies=[Depends(require_csrf_header)])
@@ -121,9 +122,30 @@ def _register(db, user, background: BackgroundTasks, path: Path, size: int, file
     return dataset
 
 
+def upload_user(request: Request, db: DbSession) -> User:
+    """Who is uploading: a bearer upload token (direct-to-engine uploads) or the normal session cookie."""
+    header = request.headers.get("authorization", "")
+    if header.lower().startswith("bearer "):
+        user_id = upload_token.verify_token(header[7:].strip())
+        user = db.get(User, user_id) if user_id else None
+        if user is None:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "The upload link expired. Please try again.")
+        return user
+    return get_current_user(get_current_session(request, db), db)
+
+
+UploadUser = Annotated[User, Depends(upload_user)]
+
+
+@router.post("/upload-token")
+def create_upload_token(user: CurrentUser) -> dict[str, Any]:
+    """A five-minute, single-use token for uploading one file directly to the engine."""
+    limiter.check(f"uptoken:{user.id}", limit=30, window_seconds=3600)
+    return {"token": upload_token.create_token(user.id), "expires_in": upload_token.TTL_SECONDS, "max_bytes": get_settings().max_upload_mb * 1024 * 1024}
+
 @router.post("", response_model=DatasetOut, status_code=status.HTTP_202_ACCEPTED)
 def upload_dataset(
-    background: BackgroundTasks, user: CurrentUser, db: DbSession,
+    background: BackgroundTasks, user: UploadUser, db: DbSession,
     file: Annotated[UploadFile, File()], name: Annotated[str | None, Form(max_length=200)] = None,
 ) -> DatasetOut:
     limiter.check(f"upload:{user.id}", limit=20, window_seconds=3600)

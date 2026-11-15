@@ -19,9 +19,24 @@ import pandas as pd
 from app.analysis.python_guard import ALLOWED_IMPORTS, PythonCheck, PythonRejected, validate_python
 
 RUNNER = Path(__file__).with_name("sandbox_runner.py")
-TIMEOUT_S = 25
+TIMEOUT_S = 25  # overridden from settings at run time; module values remain the defaults used by tests
 MEMORY_MB = 1024
-_slots = threading.BoundedSemaphore(2)  # free-tier memory: at most two analyses at once
+_slots: threading.BoundedSemaphore | None = None
+_slots_lock = threading.Lock()
+
+
+def _limits() -> tuple[int, int, threading.BoundedSemaphore]:
+    """(timeout, memory, semaphore). Configured through settings; a test that patches the module constants still wins."""
+    global _slots
+    from app.config import get_settings
+
+    s = get_settings()
+    with _slots_lock:
+        if _slots is None:
+            _slots = threading.BoundedSemaphore(max(1, s.python_max_concurrent))
+    timeout = TIMEOUT_S if TIMEOUT_S != 25 else s.python_timeout_s
+    memory = MEMORY_MB if MEMORY_MB != 1024 else s.python_memory_mb
+    return timeout, memory, _slots
 
 
 def _remove_dir(path: Path) -> None:
@@ -77,6 +92,7 @@ def run_python(code: str, df: pd.DataFrame, extra_frames: dict[str, pd.DataFrame
     """`_validate=False` exists only so tests can prove the runner's own defences hold when static checks are bypassed."""
     check: PythonCheck = validate_python(code) if _validate else PythonCheck(packages=[], uses_frames=[])
     frames = {"df": df, **(extra_frames or {})}
+    timeout_s, memory_mb, slots = _limits()
     _sweep_stale()
     workdir = Path(tempfile.mkdtemp(prefix="ql_py_"))
     try:
@@ -89,19 +105,19 @@ def run_python(code: str, df: pd.DataFrame, extra_frames: dict[str, pd.DataFrame
         preload = [p for p in check.packages if p in ("sklearn", "scipy")]
         (workdir / "request.json").write_text(
             json.dumps({
-                "frames": files, "timeout_s": TIMEOUT_S, "memory_mb": MEMORY_MB, "preload": preload,
+                "frames": files, "timeout_s": timeout_s, "memory_mb": memory_mb, "preload": preload,
                 "allowed_imports": {k: (sorted(v) if v else None) for k, v in ALLOWED_IMPORTS.items()},
             }),
             encoding="utf-8",
         )
-        with _slots:
+        with slots:
             try:
                 proc = subprocess.run(
                     [sys.executable, "-I", str(RUNNER), str(workdir)],
-                    cwd=workdir, env=_child_env(), capture_output=True, timeout=TIMEOUT_S, stdin=subprocess.DEVNULL,
+                    cwd=workdir, env=_child_env(), capture_output=True, timeout=timeout_s, stdin=subprocess.DEVNULL,
                 )
             except subprocess.TimeoutExpired as exc:
-                raise PythonExecutionError(f"The analysis ran longer than {TIMEOUT_S} seconds and was stopped.") from exc
+                raise PythonExecutionError(f"The analysis ran longer than {timeout_s} seconds and was stopped.") from exc
         result_file = workdir / "result.json"
         if not result_file.exists():
             tail = proc.stderr.decode("utf-8", "replace")[-300:]

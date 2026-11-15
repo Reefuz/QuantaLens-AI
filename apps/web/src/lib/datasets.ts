@@ -147,12 +147,20 @@ export function getRows(
   return api<RowsPage>(`/datasets/${id}/rows?${q}`);
 }
 
+/**
+ * Optional: public base URL of the engine. When set, files go straight to the engine with a short-lived upload token,
+ * which avoids any request-size limit on the proxy in front of the web app. Unset, uploads use the same-origin /api proxy.
+ */
+const DIRECT_UPLOAD_URL = process.env.NEXT_PUBLIC_UPLOAD_URL?.replace(/\/$/, "");
+
 /** Upload with real progress events (fetch cannot report upload progress). */
-export function uploadDataset(file: File, name: string, onProgress: (fraction: number) => void): Promise<Dataset> {
+export async function uploadDataset(file: File, name: string, onProgress: (fraction: number) => void): Promise<Dataset> {
+  const token = DIRECT_UPLOAD_URL ? (await api<{ token: string }>("/datasets/upload-token", { method: "POST" })).token : null;
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/datasets");
+    xhr.open("POST", token ? `${DIRECT_UPLOAD_URL}/api/datasets` : "/api/datasets");
     xhr.setRequestHeader("X-Requested-With", "QuantaLens");
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
     xhr.onerror = () => reject(new ApiError(0, "Could not reach the server. Check your connection and try again."));
     xhr.onload = () => {

@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     ai_model: str = "gemini-3.5-flash"
     ai_fallback_model: str = "gemini-3.1-flash-lite"
 
+    # Limits for model-written Python. Lower these on small hosts (a 512 MB free instance needs about 300 and 1).
+    python_memory_mb: int = 1024
+    python_timeout_s: int = 25
+    python_max_concurrent: int = 2
+
     allowed_origins: str = "http://localhost:3000"
     max_upload_mb: int = 50
 
