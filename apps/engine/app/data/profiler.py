@@ -19,6 +19,15 @@ from app.data import parsing as P
 ROW_ID = C.ROW_ID
 _ID_NAME = re.compile(r"(^|_)(id|ref|reference|code|key|uuid|number|no)$", re.I)
 CATEGORY_MAX_DISTINCT = 200
+DATE_FORMAT_EXAMPLES = {
+    "iso": "2024-01-31",
+    "yyyy/mm/dd": "2024/01/31",
+    "nn/nn/yyyy": "31/01/2024 or 01/31/2024",
+    "nn-nn-yyyy": "31-01-2024 or 01-31-2024",
+    "nn.nn.yyyy": "31.01.2024 or 01.31.2024",
+    "dd Mon yyyy": "31 Jan 2024",
+    "Mon dd, yyyy": "Jan 31, 2024",
+}
 
 
 def _severity(pct: float, *, high: float = 0.10, medium: float = 0.01) -> str:
@@ -216,7 +225,7 @@ def detect_issues(df: pd.DataFrame, columns: list[dict[str, Any]]) -> list[dict[
                 dominant = max(formats.values()) if formats else 0
                 off_format = int(sum(formats.values()) - dominant)
                 affected = off_format + unparsed
-                shown = ", ".join(f"{k} ({v:,})" for k, v in sorted(formats.items(), key=lambda kv: -kv[1]))
+                shown = ", ".join(f"{DATE_FORMAT_EXAMPLES.get(k, k)} ({v:,})" for k, v in sorted(formats.items(), key=lambda kv: -kv[1]))
                 issues.append(_issue(
                     "inconsistent_dates", name, f"Inconsistent date formats: {label}",
                     f"{len(formats)} different formats found: {shown}."

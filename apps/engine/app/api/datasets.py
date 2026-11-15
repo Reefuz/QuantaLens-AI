@@ -236,6 +236,8 @@ def dataset_rows(
         rows, total = S.query_rows(get_engine(), table, schema, offset=offset, limit=limit, sort=sort, descending=desc, search=search, filters=parsed)
     except S.QueryError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
+    except S.TableMissing as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dataset not found.") from exc
     columns = [{"name": c, "original_name": names.get(c, c), "db_type": t} for c, t in schema.items() if c != S.ROW_ID]
     return RowsOut(columns=columns, rows=rows, total=total, offset=offset, limit=limit, version=version)
 

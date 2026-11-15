@@ -14,7 +14,7 @@ from typing import Any
 
 import pandas as pd
 from psycopg import sql
-from psycopg.errors import DataError, InvalidTextRepresentation
+from psycopg.errors import DataError, InvalidTextRepresentation, UndefinedTable
 from sqlalchemy import Engine
 
 SCHEMA = "qdata"
@@ -27,6 +27,10 @@ _ORDERED_TYPES = _NUMERIC_TYPES | {"date", "timestamp"}
 
 class QueryError(ValueError):
     """A bad client request (unknown column, bad filter value). Safe to show."""
+
+
+class TableMissing(LookupError):
+    """The dataset's table no longer exists (for example, it is being deleted)."""
 
 
 @contextmanager
@@ -173,6 +177,8 @@ def query_rows(
         with raw_connection(engine) as raw:
             total = raw.execute(count + where, params).fetchone()[0]
             data = raw.execute(select + where + order + sql.SQL(" LIMIT %s OFFSET %s"), [*params, limit, offset]).fetchall()
+    except UndefinedTable as exc:
+        raise TableMissing from exc
     except (InvalidTextRepresentation, DataError) as exc:
         raise QueryError("That filter value does not match the column's type.") from exc
     out = []

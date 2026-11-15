@@ -207,6 +207,15 @@ def test_cleaning_workflow_never_touches_the_original(sample_dataset, admin_db, 
     assert table_digest(admin_db, original_table) == before
 
 
+def test_rows_request_during_deletion_is_404_not_500(sample_dataset, admin_db):
+    """Delete drops tables before removing the record; a request in that window must not crash."""
+    client, d = sample_dataset
+    admin_db.execute(f'DROP TABLE qdata."ds_{d["id"].replace("-", "")}"')
+    r = client.get(f"/api/datasets/{d['id']}/rows")
+    assert r.status_code == 404
+    assert client.delete(f"/api/datasets/{d['id']}").status_code == 204  # delete still completes cleanly
+
+
 def test_rename_and_delete_remove_everything(sample_dataset, admin_db):
     client, d = sample_dataset
     did = d["id"]

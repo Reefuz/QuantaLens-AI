@@ -5,7 +5,7 @@
 An AI-powered analytical workspace. Upload messy datasets, ask questions in plain English, and inspect the
 SQL and Python behind every answer.
 
-> **Status: in development (Phase 1 of 6 complete).** See [Project status](#project-status) for what works today.
+> **Status: in development (Phase 2 of 6 complete).** See [Project status](#project-status) for what works today.
 
 ## Architecture
 
@@ -46,6 +46,7 @@ cd apps/engine
 .venv/Scripts/python -m scripts.check_connections                # Neon + Gemini reachability
 .venv/Scripts/python -m scripts.verify_readonly_role             # proves the SQL role is least-privilege
 .venv/Scripts/python -m scripts.e2e_web                          # needs web (3000) and engine (8000) running
+RUN_INTEGRATION=1 .venv/Scripts/python -m pytest tests/integration   # real Neon database, about 9 minutes; cleans up after itself
 cd ../web && npm run lint && npm run build
 ```
 
@@ -54,11 +55,19 @@ cd ../web && npm run lint && npm run build
 | Phase | Scope | State |
 |---|---|---|
 | 1 Foundation | Repo, design system, landing page, auth, database, migrations | **Done** except Vercel/Render deployment config |
-| 2 Data management | CSV ingestion, preview, profiling, cleaning | Not started |
+| 2 Data management | CSV ingestion, preview, profiling, cleaning | **Done** (see notes below) |
 | 3 AI analytics | Agent, SQL and Python execution | Not started |
 | 4 Intelligence | Charts, validation, interpretation, follow-ups | Not started |
 | 5 Completion | Reports, history, settings, hardening | Not started |
 | 6 Deployment | GitHub, Neon production, Vercel, engine hosting | Repo pushed; deployment not started |
+
+### Phase 2 notes
+- The original upload is stored as text, exactly as received, and is never modified. Cleaning builds a separate typed table from approved operations only.
+- Profiling covers missing values and placeholders, exact duplicates, duplicate identifiers, mixed types, currency formatting, mixed date formats, inconsistent categories, whitespace, outliers, empty and constant columns.
+- Outliers use Tukey fences (1.5 x IQR), on the log scale for positive skewed data. They are flagged, never deleted.
+- Ambiguous dates such as 03/04/2024 are resolved from the data where possible; otherwise day-first is assumed and the UI says so.
+- Not covered yet: Excel files, non-CSV sources, connecting external PostgreSQL databases, and a worker queue. Background jobs run in the API process, so a restart mid-job leaves the dataset marked failed after 20 minutes.
+- Deployment caveat to verify in Phase 6: Vercel may cap request bodies for rewritten routes, which would limit large uploads through the proxy.
 
 Dashboard sections for features that are not built yet say so on the page. Nothing in the UI is simulated.
 
