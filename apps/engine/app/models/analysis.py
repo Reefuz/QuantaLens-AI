@@ -64,7 +64,8 @@ class SqlExecutionLog(Base, IdMixin, CreatedMixin):
     session_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("analysis_sessions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    sql_text: Mapped[str] = mapped_column(Text, nullable=False)  # exact string executed
+    sql_text: Mapped[str] = mapped_column(Text, nullable=False)  # as written by the model
+    executed_sql: Mapped[str | None] = mapped_column(Text)  # the exact validated statement sent to the database
     explanation: Mapped[str | None] = mapped_column(Text)
     tables: Mapped[list] = mapped_column(JsonType, default=list, nullable=False)
     columns: Mapped[list] = mapped_column(JsonType, default=list, nullable=False)
