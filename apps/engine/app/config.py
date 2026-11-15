@@ -19,7 +19,8 @@ class Settings(BaseSettings):
 
     ai_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
     ai_provider_api_key: SecretStr = SecretStr("")
-    ai_model: str = "gemini-flash-latest"
+    ai_model: str = "gemini-3.5-flash"
+    ai_fallback_model: str = "gemini-3.1-flash-lite"
 
     allowed_origins: str = "http://localhost:3000"
     max_upload_mb: int = 50
