@@ -75,6 +75,25 @@ What it does **not** protect against:
 ### Privacy: what is sent to the AI provider
 When you ask a question, the following leave this system for the AI provider's API: your question, column names, up to five example values per column (40 characters each), and the first 25 rows of each query result the model requests. **On Google's free Gemini API tier, Google's published terms allow prompts to be used to improve its products. Do not use the free-tier key with confidential or personal data.** Use a paid key (with its data-use terms reviewed) or a self-hosted model for sensitive datasets. The provider is configurable (`AI_BASE_URL`).
 
+## Implemented (Phase 5: hardening, reports, account controls)
+
+| Area | Control | Verified by |
+|---|---|---|
+| Session storage | Session tokens are stored as HMAC-SHA256 keyed with `AUTH_SECRET`, so a copy of the sessions table alone cannot be used to look tokens up. Rotating `AUTH_SECRET` signs everyone out. | `test_session_hashes_depend_on_the_server_secret` |
+| Stale sessions | An expired or revoked cookie ends at the login form. (A redirect loop between `/dashboard` and `/login` was found and fixed during testing.) | `scripts/e2e_web.py`, browser test |
+| Passwords | 10 to 128 characters, a common-password denylist (matched after stripping punctuation), no email name inside the password, minimum character variety. Applies to registration and password change. | `test_password_policy` |
+| Password change | Needs the current password, is rate limited (5 attempts per hour, failures included) and signs out every other device. | `test_password_change_rules_and_session_revocation` |
+| Account erasure | "Delete all my data" and "Delete my account" need the password. They drop every dataset table, then the metadata. Conversations, analyses, logs and charts cascade. | `test_delete_account`, browser test |
+| Security headers | Engine: `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` on API responses, HSTS in production. Web: CSP (`default-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`, `connect-src 'self'`), HSTS, same headers. | `test_security_headers` |
+| Request limits | 600 requests per minute per IP across the API, plus the per-route limits listed earlier. | `test_global_rate_limit_applies_to_api_only` |
+| Startup checks | A production engine refuses to start without `DATABASE_URL`, a separate read-only `ANALYTICS_DATABASE_URL`, a 32+ character `AUTH_SECRET`, and explicit `https://` origins. The error names variables, never values. API docs are not served in production. | `test_production_config_is_validated_without_leaking_values` |
+| Report exports | Built only from the stored analysis owned by the signed-in user (other users get 404). PDF text is escaped so uploaded data cannot inject markup. Excel stores text cells as text, so `=HYPERLINK(...)` from an uploaded file never runs. CSV prefixes cells that start with `= + - @` with an apostrophe. Characters the PDF font cannot show become `?`. | `tests/test_reports.py` (32 tests) |
+
+Limits of these controls:
+- **CSP allows inline scripts** (`script-src 'unsafe-inline'`), because Next.js injects inline hydration scripts and no nonce setup is in place. It still blocks other origins, framing, plugins and form posts elsewhere. A nonce-based policy is the next step.
+- **Rate limits are per process and in memory.** A restart resets them and several instances would not share them.
+- **Client IP comes from `X-Forwarded-For`.** Behind Vercel this is the real client address. A caller who reaches the engine directly can spoof it, so login also has a per-email limit.
+- **No email verification, password reset or two-factor authentication.** Anyone who knows the password can sign in, and a forgotten password cannot be recovered.
 ## Known limits
 
 - **Spreadsheet formulas** (`=SUM(...)`) in uploaded cells are stored as plain text. Exports in Phase 5 must neutralise them.

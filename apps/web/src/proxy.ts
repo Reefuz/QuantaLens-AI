@@ -3,10 +3,11 @@ import type { NextRequest } from "next/server";
 
 const SESSION_COOKIE = "ql_session";
 const PROTECTED = ["/dashboard", "/datasets", "/analyst", "/history", "/reports", "/settings"];
-const AUTH_PAGES = ["/login", "/register"];
 
 /**
  * Optimistic redirect only. It checks that a session cookie exists, not that it is valid.
+ * It deliberately does NOT redirect away from /login or /register: a stale cookie (expired or revoked session) would then
+ * bounce between the dashboard and the login page forever. Those pages check the session properly instead.
  * Real authentication happens in the workspace layout via the engine (see lib/server/auth.ts),
  * and again on every engine API call.
  */
@@ -20,12 +21,9 @@ export function proxy(request: NextRequest) {
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
-  if (AUTH_PAGES.includes(pathname) && hasCookie) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/datasets/:path*", "/analyst/:path*", "/history/:path*", "/reports/:path*", "/settings/:path*", "/login", "/register"],
+  matcher: ["/dashboard/:path*", "/datasets/:path*", "/analyst/:path*", "/history/:path*", "/reports/:path*", "/settings/:path*"],
 };

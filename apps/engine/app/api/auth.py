@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import delete, select
 
 from app.core.auth import (
@@ -13,6 +13,7 @@ from app.core.auth import (
     create_session,
     require_csrf_header,
 )
+from app.core.passwords import check_password
 from app.core.rate_limit import client_ip, limiter
 from app.core.security import hash_password, hash_token, needs_rehash, verify_password
 from app.models import AuthSession, User, UserSettings
@@ -35,12 +36,12 @@ class Credentials(BaseModel):
 class RegisterRequest(Credentials):
     display_name: str | None = Field(default=None, max_length=120)
 
-    @field_validator("password")
-    @classmethod
-    def check_strength(cls, v: str) -> str:
-        if len(v) < MIN_PASSWORD:
-            raise ValueError(f"Password must be at least {MIN_PASSWORD} characters.")
-        return v
+    @model_validator(mode="after")
+    def check_strength(self) -> "RegisterRequest":
+        problem = check_password(self.password, self.email)
+        if problem:
+            raise ValueError(problem)
+        return self
 
 
 class UserOut(BaseModel):

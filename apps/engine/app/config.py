@@ -51,6 +51,28 @@ class Settings(BaseSettings):
         return self.app_env == "production"
 
 
+class ConfigError(RuntimeError):
+    """The deployment is misconfigured. The message names variables, never their values."""
+
+
+def validate_for_production(s: Settings) -> None:
+    """Refuse to start a production engine that would run unsafely."""
+    problems: list[str] = []
+    if not s.database_url.get_secret_value():
+        problems.append("DATABASE_URL is not set")
+    if not s.analytics_database_url.get_secret_value():
+        problems.append("ANALYTICS_DATABASE_URL is not set (the read-only role used for generated SQL)")
+    elif s.analytics_database_url.get_secret_value() == s.database_url.get_secret_value():
+        problems.append("ANALYTICS_DATABASE_URL must be a different, read-only role, not the application role")
+    if len(s.auth_secret.get_secret_value()) < 32:
+        problems.append("AUTH_SECRET must be at least 32 characters")
+    origins = s.cors_origins
+    if not origins or any(o == "*" or not o.startswith("https://") for o in origins):
+        problems.append("ALLOWED_ORIGINS must list explicit https:// origins (no wildcard)")
+    if problems:
+        raise ConfigError("Invalid production configuration: " + "; ".join(problems) + ".")
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()

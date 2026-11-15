@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ChartCard } from "@/components/charts/chart-card";
 import type { Finding, Payload } from "@/lib/analyst";
 import { cn } from "@/lib/utils";
+import { ExportMenu } from "./export-menu";
 import { ValidationBadge } from "./badges";
 import { RunTimeline } from "./run-timeline";
 
@@ -34,7 +35,7 @@ function List({ items }: { items: string[] }) {
   );
 }
 
-export function AnswerView({ payload, onInspect, onAsk, disabled }: { payload: Payload; onInspect: (tab: string) => void; onAsk: (q: string) => void; disabled: boolean }) {
+export function AnswerView({ payload, messageId, onInspect, onAsk, disabled }: { payload: Payload; messageId: string; onInspect: (tab: string) => void; onAsk: (q: string) => void; disabled: boolean }) {
   const [showSteps, setShowSteps] = useState(false);
   const a = payload.answer;
   if (!a) return null;
@@ -99,6 +100,7 @@ export function AnswerView({ payload, onInspect, onAsk, disabled }: { payload: P
         </Button>
       </div>
       {showSteps && <div className="rounded-md border bg-muted/30 p-3"><RunTimeline steps={payload.timeline} compact /></div>}
+      <div className="flex flex-wrap items-center gap-3"><span className="text-xs font-medium text-muted-foreground">Export</span><ExportMenu messageId={messageId} results={payload.results.map((r) => ({ id: r.id, label: r.label, row_count: r.row_count }))} /></div>
 
       {a.follow_up_questions.length > 0 && (
         <div className="flex flex-wrap gap-2">

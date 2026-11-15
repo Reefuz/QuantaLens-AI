@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { PageHeader, PendingFeature } from "@/components/workspace/page-header";
+import { HistoryView } from "@/components/history/history-view";
+import { PageHeader } from "@/components/workspace/page-header";
+import { loadReadyDatasets } from "@/lib/server/datasets";
 
 export const metadata: Metadata = { title: "Analysis History" };
 
-export default function HistoryPage() {
+export default async function HistoryPage() {
   return (
     <>
-      <PageHeader title="Analysis History" description="Revisit and continue previous analyses." />
-      <PendingFeature phase="Phase 5" summary="History appears here once you have run analyses." />
+      <PageHeader title="Analysis History" description="Every question you have asked, with its answer, the SQL and Python behind it, and its validation status." />
+      <HistoryView datasets={await loadReadyDatasets()} mode="history" />
     </>
   );
 }

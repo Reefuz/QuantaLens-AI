@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
+import { getCurrentUser } from "@/lib/server/auth";
 
 export const metadata: Metadata = { title: "Log in" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
+  if (await getCurrentUser()) redirect("/dashboard"); // a real session check, unlike the cookie-only proxy
   const { next } = await searchParams;
   return (
     <>

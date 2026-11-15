@@ -1,6 +1,7 @@
 """Password hashing and session token primitives."""
 
 import hashlib
+import hmac
 import secrets
 
 from argon2 import PasswordHasher
@@ -32,4 +33,8 @@ def new_session_token() -> str:
 
 
 def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode()).hexdigest()
+    """HMAC-SHA256 keyed with AUTH_SECRET. A copy of the sessions table alone cannot be used to look up or forge tokens."""
+    from app.config import get_settings
+
+    key = get_settings().auth_secret.get_secret_value().encode()
+    return hmac.new(key, token.encode(), hashlib.sha256).hexdigest()

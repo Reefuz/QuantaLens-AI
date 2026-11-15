@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
+import { getCurrentUser } from "@/lib/server/auth";
 
 export const metadata: Metadata = { title: "Create account" };
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  if (await getCurrentUser()) redirect("/dashboard");
   return (
     <>
       <h1 className="mb-1.5 text-2xl font-semibold tracking-tight">Create your account</h1>

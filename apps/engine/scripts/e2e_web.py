@@ -56,6 +56,10 @@ def main() -> int:
         check("session invalid after logout", httpx.get(f"{BASE}/api/auth/me", cookies=stolen).status_code == 401)
         r = httpx.get(f"{BASE}/dashboard", cookies=stolen, follow_redirects=False)
         check("stale cookie cannot reach dashboard", r.status_code in (302, 307) and "/login" in r.headers.get("location", ""), str(r.status_code))
+        # Regression: a stale or revoked session cookie must end at the login form, not loop between pages.
+        final = httpx.get(f"{BASE}/dashboard", cookies=stolen, follow_redirects=True)
+        check("stale cookie ends at the login page without a redirect loop", final.status_code == 200 and str(final.url).split("?")[0].endswith("/login"), str(final.url))
+        check("login page is reachable with a stale cookie", httpx.get(f"{BASE}/login", cookies=stolen, follow_redirects=False).status_code == 200)
     finally:
         with get_sessionmaker()() as db:
             db.execute(delete(User).where(User.email == email))

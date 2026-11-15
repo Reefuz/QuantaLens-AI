@@ -86,7 +86,7 @@ def _persist(db: Session, conversation: Conversation, session: AnalysisSession, 
     db.add(msg)
     db.flush()
     session.message_id = msg.id
-    session.status = {"answer": "completed", "clarification": "completed", "error": "failed"}.get(payload["type"], "failed")
+    session.status = {"answer": "completed", "clarification": "clarification", "error": "failed"}.get(payload["type"], "failed")
     session.events = payload["timeline"]
     session.model = payload.get("model")
     session.finished_at = utcnow()

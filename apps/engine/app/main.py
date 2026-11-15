@@ -4,9 +4,10 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, conversations, datasets, health, overview
-from app.config import get_settings
+from app.api import auth, conversations, datasets, health, history, overview, reports, settings as account_settings
+from app.config import get_settings, validate_for_production
 from app.core.body_limit import BodySizeLimitMiddleware
+from app.core.middleware import SecurityMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("quantalens")
@@ -14,6 +15,8 @@ logger = logging.getLogger("quantalens")
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    if settings.is_production:
+        validate_for_production(settings)
     app = FastAPI(
         title="QuantaLens AI Engine",
         version="0.1.0",
@@ -31,6 +34,7 @@ def create_app() -> FastAPI:
     )
 
     # Allow a little overhead for multipart framing on top of the file limit.
+    app.add_middleware(SecurityMiddleware, production=settings.is_production)
     app.add_middleware(BodySizeLimitMiddleware, limits={"/api/datasets": (settings.max_upload_mb + 1) * 1024 * 1024})
 
     @app.exception_handler(Exception)
@@ -44,6 +48,9 @@ def create_app() -> FastAPI:
     app.include_router(overview.router, prefix="/api")
     app.include_router(datasets.router, prefix="/api")
     app.include_router(conversations.router, prefix="/api")
+    app.include_router(history.router, prefix="/api")
+    app.include_router(reports.router, prefix="/api")
+    app.include_router(account_settings.router, prefix="/api")
     return app
 
 

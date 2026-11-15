@@ -76,7 +76,7 @@ export function Thread({
               </div>
             ) : m.payload?.type === "answer" ? (
               <div key={m.id} className={m.id === selectedId ? "rounded-lg ring-1 ring-brand/40" : ""}>
-                <AnswerView payload={m.payload} disabled={running || !canAsk} onAsk={onAsk} onInspect={(tab) => onInspect(m.id, tab)} />
+                <AnswerView payload={m.payload} messageId={m.id} disabled={running || !canAsk} onAsk={onAsk} onInspect={(tab) => onInspect(m.id, tab)} />
               </div>
             ) : m.payload?.type === "clarification" ? (
               <div key={m.id} className="space-y-3 rounded-lg border bg-card p-5">

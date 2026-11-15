@@ -5,7 +5,7 @@
 An AI-powered analytical workspace. Upload messy datasets, ask questions in plain English, and inspect the
 SQL and Python behind every answer.
 
-> **Status: in development (Phase 3 of 6 complete).** See [Project status](#project-status) for what works today.
+> **Status: in development (Phase 5 of 6 complete; deployment in progress).** See [Project status](#project-status) for what works today.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ cd ../web && npm run lint && npm run build
 | 2 Data management | CSV ingestion, preview, profiling, cleaning | **Done** (see notes below) |
 | 3 AI analytics | Agent, SQL and Python execution, analyst workspace | **Done** (see notes below) |
 | 4 Intelligence | Charts, validation, interpretation, follow-ups | **Mostly built in Phase 3** (charts, validation, follow-ups). Remaining: broader validation coverage, tuning |
-| 5 Completion | Reports, history, settings, hardening | Not started |
+| 5 Completion | Reports, history, settings, hardening | **Done** (see notes below) |
 | 6 Deployment | GitHub, Neon production, Vercel, engine hosting | Repo pushed; deployment not started |
 
 ### Phase 2 notes
@@ -77,7 +77,13 @@ cd ../web && npm run lint && npm run build
 - **Free-tier AI limits:** the primary model (`gemini-3.5-flash`) was rate limited during testing, so most answers came from the fallback `gemini-3.1-flash-lite`, which is weaker. Expect slower answers and occasionally clumsier analysis. The UI says when a fallback is used.
 - **Answer quality depends on the model.** In testing, the model sometimes misread its own results (for example, claiming the wrong segment had the lowest average) and misused the validation tool. The ranking check, the number scan and the retry rules exist because of those real failures, but they reduce the risk and do not remove it. Read the Validation tab.
 - Totals on the original text columns cannot be independently verified. Clean the dataset first for verifiable results.
-- Analysis History, Reports and export are Phase 5.
+- Analysis History, Reports and export were completed in Phase 5.
+
+### Phase 5 notes
+- **History** lists every analysis with search, dataset and outcome filters, validation status and what ran. **Reports** exports an answered analysis as a PDF (native vector charts), an Excel workbook (summary, validation, queries, one sheet per result, native charts) or a CSV of any result. Exports use the stored results, so they match what you saw. Result tables in exports hold at most 300 rows each.
+- **Settings** has profile, password change (signs out other devices), device list, storage, and deletion of all data or the whole account.
+- Area charts are drawn as lines in the PDF.
+- Not built: connecting external PostgreSQL databases, email verification, password reset, two-factor authentication.
 
 Dashboard sections for features that are not built yet say so on the page. Nothing in the UI is simulated.
 

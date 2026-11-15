@@ -5,6 +5,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { EmptyState, PageHeader } from "@/components/workspace/page-header";
 import { engineFetch, requireUser } from "@/lib/server/auth";
 import { formatBytes } from "@/lib/format";
+import { ValidationBadge } from "@/components/analyst/badges";
+import type { HistoryPage } from "@/lib/history";
 
 export const metadata: Metadata = { title: "Overview" };
 
@@ -27,6 +29,15 @@ async function loadOverview(): Promise<Overview | null> {
   }
 }
 
+async function loadInsights(): Promise<HistoryPage | null> {
+  try {
+    const res = await engineFetch("/api/history?status=completed&limit=3");
+    return res.ok ? ((await res.json()) as HistoryPage) : null;
+  } catch {
+    return null;
+  }
+}
+
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg border bg-card p-5">
@@ -39,7 +50,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 
 export default async function DashboardPage() {
   const user = await requireUser();
-  const data = await loadOverview();
+  const [data, insights] = await Promise.all([loadOverview(), loadInsights()]);
 
   return (
     <>
@@ -70,6 +81,28 @@ export default async function DashboardPage() {
             />
           </div>
 
+          <section aria-labelledby="recent-insights">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 id="recent-insights" className="text-sm font-semibold">Recent insights</h2>
+              <Link href="/history" className="text-sm text-muted-foreground hover:text-foreground">View history</Link>
+            </div>
+            {!insights || insights.items.length === 0 ? (
+              <EmptyState title="No insights yet" body="Answers from the AI Analyst appear here with their validation status." />
+            ) : (
+              <ul className="grid gap-3 md:grid-cols-3">
+                {insights.items.map((i) => (
+                  <li key={i.session_id} className="rounded-lg border bg-card p-4">
+                    <div className="mb-2 flex items-start justify-between gap-2">
+                      <p className="line-clamp-2 text-sm font-medium">{i.question}</p>
+                      {i.validation_status && <ValidationBadge status={i.validation_status} />}
+                    </div>
+                    <p className="line-clamp-4 text-sm text-muted-foreground">{i.summary}</p>
+                    <Link href={`/analyst?d=${i.dataset_id}&c=${i.conversation_id}`} className="mt-3 inline-block text-xs underline underline-offset-2">Open analysis</Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <div className="grid gap-6 lg:grid-cols-2">
             <section aria-labelledby="recent-datasets">
               <div className="mb-3 flex items-center justify-between">
