@@ -74,7 +74,7 @@ It exits non-zero on any failure. Run it after every production deploy.
 
 ## 5. CI
 
-`.github/workflows/ci.yml` installs the engine from `requirements.txt` with `constraints.txt` on Linux, runs the unit tests
+`docs/ci.yml.example` is a GitHub Actions workflow (copy it to `.github/workflows/ci.yml`; pushing workflow files needs a token with the `workflow` scope). It installs the engine from `requirements.txt` with `constraints.txt` on Linux, runs the unit tests
 (including the Linux-only memory-limit test), then lints and builds the web app. Integration tests need a real database and
 run only with `RUN_INTEGRATION=1`.
 
