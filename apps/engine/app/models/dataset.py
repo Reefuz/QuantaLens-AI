@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base, CreatedMixin, IdMixin, JsonType
+from app.models.base import Base, CreatedMixin, IdMixin, JsonType, utcnow
 
 
 class Dataset(Base, IdMixin, CreatedMixin):
@@ -17,7 +17,8 @@ class Dataset(Base, IdMixin, CreatedMixin):
     original_filename: Mapped[str | None] = mapped_column(String(255))
     source_type: Mapped[str] = mapped_column(String(20), default="csv", nullable=False)  # csv | postgres
     is_sample: Mapped[bool] = mapped_column(default=False, nullable=False)
-    status: Mapped[str] = mapped_column(String(20), default="processing", nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="processing", nullable=False)  # processing | ready | cleaning | failed
+    status_changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     # Tables in schema "qdata". The original is immutable; cleaned is created only after user approval.
     original_table: Mapped[str | None] = mapped_column(String(80))
     cleaned_table: Mapped[str | None] = mapped_column(String(80))

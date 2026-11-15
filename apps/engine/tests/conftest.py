@@ -2,7 +2,8 @@ import os
 
 # Must be set before app modules read settings.
 os.environ.setdefault("APP_ENV", "test")
-os.environ["DATABASE_URL"] = ""  # never touch the real database from unit tests
+if os.environ.get("RUN_INTEGRATION") != "1":
+    os.environ["DATABASE_URL"] = ""  # unit tests never touch the real database
 
 import pytest
 from fastapi.testclient import TestClient

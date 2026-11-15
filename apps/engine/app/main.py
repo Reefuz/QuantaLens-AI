@@ -4,8 +4,9 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import auth, health, overview
+from app.api import auth, datasets, health, overview
 from app.config import get_settings
+from app.core.body_limit import BodySizeLimitMiddleware
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger("quantalens")
@@ -29,6 +30,9 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type", "X-Requested-With"],
     )
 
+    # Allow a little overhead for multipart framing on top of the file limit.
+    app.add_middleware(BodySizeLimitMiddleware, limits={"/api/datasets": (settings.max_upload_mb + 1) * 1024 * 1024})
+
     @app.exception_handler(Exception)
     async def unhandled(request: Request, exc: Exception) -> JSONResponse:
         # Log the type only. Messages can contain row data or connection details.
@@ -38,6 +42,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/api")
     app.include_router(overview.router, prefix="/api")
+    app.include_router(datasets.router, prefix="/api")
     return app
 
 
