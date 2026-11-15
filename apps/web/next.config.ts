@@ -5,6 +5,9 @@ const ENGINE_URL = (process.env.PYTHON_ANALYTICS_API_URL ?? "http://localhost:80
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Gzip would buffer the streamed analysis events (NDJSON) that the rewrite proxies from the engine.
+  // On Vercel, compression happens at the edge and does not affect streaming.
+  compress: false,
   turbopack: {
     rules: {
       "*.css": {

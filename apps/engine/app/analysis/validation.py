@@ -223,7 +223,7 @@ def run_check(state: RunState, check: dict[str, Any], cid: str) -> dict[str, Any
                 return _result(cid, kind, label, "unverified", "Rank recomputed from the stored result", f"{len(tied)} entries tie for this position ({', '.join(tied[:4])}).", claimed_label, actual)
             ok = actual == claimed_label
             return _result(cid, kind, label, "verified" if ok else "failed", f"Sorted {r.id} by {vc} and read position {rank} ({direction}).",
-                           f"{actual} is the {direction} ({value:g})." if ok else f"The {direction} is {actual} ({value:g}), not {claimed_label}.", claimed_label, actual)
+                           f"{actual} is the {direction} ({value:,.2f})." if ok else f"The {direction} is {actual} ({value:,.2f}), not {claimed_label}.", claimed_label, actual)
         if kind == "null_exposure":
             column = check.get("column")
             if column not in h.schema:

@@ -15,7 +15,7 @@ function stats(c: ColumnProfile): string {
   return "";
 }
 
-export function ColumnsView({ columns, note }: { columns: ColumnProfile[]; note?: string }) {
+export function ColumnsView({ columns, note, compact }: { columns: ColumnProfile[]; note?: string; compact?: boolean }) {
   return (
     <div className="space-y-3">
       {note && <p className="text-sm text-muted-foreground">{note}</p>}
@@ -27,8 +27,8 @@ export function ColumnsView({ columns, note }: { columns: ColumnProfile[]; note?
               <th className="px-4 py-2.5 font-medium">Detected type</th>
               <th className="px-4 py-2.5 text-right font-medium">Missing</th>
               <th className="px-4 py-2.5 text-right font-medium">Distinct</th>
-              <th className="px-4 py-2.5 font-medium">Range and summary</th>
-              <th className="px-4 py-2.5 font-medium">Common values</th>
+              {!compact && <th className="px-4 py-2.5 font-medium">Range and summary</th>}
+              {!compact && <th className="px-4 py-2.5 font-medium">Common values</th>}
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -48,10 +48,8 @@ export function ColumnsView({ columns, note }: { columns: ColumnProfile[]; note?
                   <span className="ml-1 text-xs text-muted-foreground">({c.missing_pct ?? 0}%)</span>
                 </td>
                 <td className="px-4 py-2.5 text-right tabular-nums">{c.distinct_count.toLocaleString("en-GB")}</td>
-                <td className="px-4 py-2.5 text-xs text-muted-foreground">{stats(c)}</td>
-                <td className="max-w-xs px-4 py-2.5 text-xs text-muted-foreground">
-                  <span className="line-clamp-2">{c.samples.join(", ")}</span>
-                </td>
+                {!compact && <td className="px-4 py-2.5 text-xs text-muted-foreground">{stats(c)}</td>}
+                {!compact && (<td className="max-w-xs px-4 py-2.5 text-xs text-muted-foreground"><span className="line-clamp-2">{c.samples.join(", ")}</span></td>)}
               </tr>
             ))}
           </tbody>

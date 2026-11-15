@@ -5,7 +5,7 @@
 An AI-powered analytical workspace. Upload messy datasets, ask questions in plain English, and inspect the
 SQL and Python behind every answer.
 
-> **Status: in development (Phase 2 of 6 complete).** See [Project status](#project-status) for what works today.
+> **Status: in development (Phase 3 of 6 complete).** See [Project status](#project-status) for what works today.
 
 ## Architecture
 
@@ -56,8 +56,8 @@ cd ../web && npm run lint && npm run build
 |---|---|---|
 | 1 Foundation | Repo, design system, landing page, auth, database, migrations | **Done** except Vercel/Render deployment config |
 | 2 Data management | CSV ingestion, preview, profiling, cleaning | **Done** (see notes below) |
-| 3 AI analytics | Agent, SQL and Python execution | Not started |
-| 4 Intelligence | Charts, validation, interpretation, follow-ups | Not started |
+| 3 AI analytics | Agent, SQL and Python execution, analyst workspace | **Done** (see notes below) |
+| 4 Intelligence | Charts, validation, interpretation, follow-ups | **Mostly built in Phase 3** (charts, validation, follow-ups). Remaining: broader validation coverage, tuning |
 | 5 Completion | Reports, history, settings, hardening | Not started |
 | 6 Deployment | GitHub, Neon production, Vercel, engine hosting | Repo pushed; deployment not started |
 
@@ -68,6 +68,16 @@ cd ../web && npm run lint && npm run build
 - Ambiguous dates such as 03/04/2024 are resolved from the data where possible; otherwise day-first is assumed and the UI says so.
 - Not covered yet: Excel files, non-CSV sources, connecting external PostgreSQL databases, and a worker queue. Background jobs run in the API process, so a restart mid-job leaves the dataset marked failed after 20 minutes.
 - Deployment caveat to verify in Phase 6: Vercel may cap request bodies for rewritten routes, which would limit large uploads through the proxy.
+
+### Phase 3 notes
+- The agent (Gemini through an OpenAI-compatible endpoint) calls eight tools: `inspect_dataset`, `plan_analysis`, `execute_sql`, `execute_python`, `generate_chart`, `validate_results`, `request_clarification`, `explain_results`. It chooses which to call, and can re-run an analysis when a result is not enough.
+- Analyses stream to the browser as they happen. Each timeline step is an event the server actually emitted. The analysis keeps running and is saved if the browser is closed.
+- SQL runs through a guard and a read-only database role. Python runs in a restricted child process. **Read `SECURITY.md` for exactly what that does and does not protect against.**
+- Eleven chart types, each built server-side from a stored result. Export to CSV and PNG.
+- **Free-tier AI limits:** the primary model (`gemini-3.5-flash`) was rate limited during testing, so most answers came from the fallback `gemini-3.1-flash-lite`, which is weaker. Expect slower answers and occasionally clumsier analysis. The UI says when a fallback is used.
+- **Answer quality depends on the model.** In testing, the model sometimes misread its own results (for example, claiming the wrong segment had the lowest average) and misused the validation tool. The ranking check, the number scan and the retry rules exist because of those real failures, but they reduce the risk and do not remove it. Read the Validation tab.
+- Totals on the original text columns cannot be independently verified. Clean the dataset first for verifiable results.
+- Analysis History, Reports and export are Phase 5.
 
 Dashboard sections for features that are not built yet say so on the page. Nothing in the UI is simulated.
 
