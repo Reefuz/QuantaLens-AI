@@ -5,7 +5,7 @@
 An AI-powered analytical workspace. Upload messy datasets, ask questions in plain English, and inspect the
 SQL and Python behind every answer.
 
-> **Status: in development (Phase 5 of 6 complete; deployment in progress).** See [Project status](#project-status) for what works today.
+> **Status: deployed.** Live at https://quantalens-ai.vercel.app (engine on Render free tier, which sleeps when idle; the first request after a pause can take about a minute). See [Project status](#project-status) for what works today.
 
 ## Architecture
 
@@ -54,12 +54,12 @@ cd ../web && npm run lint && npm run build
 
 | Phase | Scope | State |
 |---|---|---|
-| 1 Foundation | Repo, design system, landing page, auth, database, migrations | **Done** except Vercel/Render deployment config |
+| 1 Foundation | Repo, design system, landing page, auth, database, migrations | **Done** |
 | 2 Data management | CSV ingestion, preview, profiling, cleaning | **Done** (see notes below) |
 | 3 AI analytics | Agent, SQL and Python execution, analyst workspace | **Done** (see notes below) |
 | 4 Intelligence | Charts, validation, interpretation, follow-ups | **Mostly built in Phase 3** (charts, validation, follow-ups). Remaining: broader validation coverage, tuning |
 | 5 Completion | Reports, history, settings, hardening | **Done** (see notes below) |
-| 6 Deployment | GitHub, Neon production, Vercel, engine hosting | Repo pushed; deployment not started |
+| 6 Deployment | GitHub, Neon production, Vercel, engine hosting | **Done**. See `docs/DEPLOYMENT.md` |
 
 ### Phase 2 notes
 - The original upload is stored as text, exactly as received, and is never modified. Cleaning builds a separate typed table from approved operations only.
@@ -67,7 +67,7 @@ cd ../web && npm run lint && npm run build
 - Outliers use Tukey fences (1.5 x IQR), on the log scale for positive skewed data. They are flagged, never deleted.
 - Ambiguous dates such as 03/04/2024 are resolved from the data where possible; otherwise day-first is assumed and the UI says so.
 - Not covered yet: Excel files, non-CSV sources, connecting external PostgreSQL databases, and a worker queue. Background jobs run in the API process, so a restart mid-job leaves the dataset marked failed after 20 minutes.
-- Deployment caveat to verify in Phase 6: Vercel may cap request bodies for rewritten routes, which would limit large uploads through the proxy.
+- Uploads through the Vercel proxy were tested in production with an 8 MB file and worked. A direct-to-engine fallback exists (`NEXT_PUBLIC_UPLOAD_URL`) but is not needed today.
 
 ### Phase 3 notes
 - The agent (Gemini through an OpenAI-compatible endpoint) calls eight tools: `inspect_dataset`, `plan_analysis`, `execute_sql`, `execute_python`, `generate_chart`, `validate_results`, `request_clarification`, `explain_results`. It chooses which to call, and can re-run an analysis when a result is not enough.

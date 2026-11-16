@@ -45,7 +45,7 @@ The free plan sleeps after inactivity, so the first request after a pause is slo
 
 ## 3. Frontend (Vercel)
 
-Project root directory: `apps/web`. Environment variables:
+Project root directory: `apps/web`, framework preset Next.js. The project is connected to GitHub, so every push to `main` deploys production. If the root directory is wrong, Vercel builds an empty site in a few seconds and every page returns 404. Environment variables:
 
 | Variable | Value |
 | --- | --- |
@@ -53,7 +53,7 @@ Project root directory: `apps/web`. Environment variables:
 | `NEXT_PUBLIC_APP_URL` | The Vercel production URL |
 | `NEXT_PUBLIC_UPLOAD_URL` | Optional. The Render URL. Only set it if large uploads fail through the proxy (below). |
 
-Deploy with `vercel --prod` from `apps/web`, or connect the GitHub repository.
+Deploy by pushing to `main`, or with `vercel --prod` from the repository root (the CLI applies the root directory setting).
 
 ### Upload size
 
@@ -80,5 +80,5 @@ run only with `RUN_INTEGRATION=1`.
 
 ## Not covered
 
-- The Docker image has not been built locally (Docker is not installed on the development machine). Render builds it on first deploy.
+- The Docker image is built by Render; it is not built in CI.
 - The Python sandbox is defence in depth, not a hardened sandbox. See `SECURITY.md`.
