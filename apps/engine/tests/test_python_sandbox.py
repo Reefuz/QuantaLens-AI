@@ -201,6 +201,22 @@ def test_infinite_loop_is_killed(df, monkeypatch):
 
 
 @pytest.mark.skipif(os.name == "nt", reason="memory rlimit needs POSIX")
+def test_normal_analysis_fits_production_memory_budget(df, monkeypatch):
+    """Regression: a flat RLIMIT_AS below what pandas/pyarrow already map killed every run on Render."""
+    monkeypatch.setattr(python_exec, "MEMORY_MB", 400)
+    r = run_python("result = df.groupby(df.columns[0]).size().reset_index(name='n')", df)
+    assert r.ok, r.error
+    assert r.limits_enforced
+
+
+@pytest.mark.skipif(os.name == "nt", reason="Linux /proc paths")
+@pytest.mark.parametrize("path", ["/proc/self/environ", "/proc/self/cmdline", "/etc/passwd", "/sys/fs/cgroup/memory.max"])
+def test_cpu_probe_allowance_does_not_open_other_system_files(df, path):
+    r = run_python(f"result = len(pd.read_csv({path!r}, header=None))", df, _validate=False)
+    assert not r.ok and r.error["type"] == "PermissionError"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="memory rlimit needs POSIX")
 def test_memory_limit_enforced(df, monkeypatch):
     monkeypatch.setattr(python_exec, "MEMORY_MB", 600)
     r = run_python("result = len(np.ones((4000, 4000, 20)))", df)

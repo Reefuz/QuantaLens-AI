@@ -49,7 +49,19 @@ LIMITS_ENFORCED = False
 try:
     import resource
 
-    mem = REQUEST["memory_mb"] * 1024 * 1024
+    # RLIMIT_AS caps virtual address space. pandas/pyarrow are already loaded and reserve a large
+    # amount of it, so the budget is added on top of what the process already maps; a flat cap below
+    # the current size makes every later allocation fail and the child dies without a result.
+    base = 0
+    try:
+        with open("/proc/self/status", encoding="ascii") as _fh:
+            for _line in _fh:
+                if _line.startswith("VmSize:"):
+                    base = int(_line.split()[1]) * 1024
+                    break
+    except OSError:
+        pass
+    mem = base + REQUEST["memory_mb"] * 1024 * 1024
     resource.setrlimit(resource.RLIMIT_AS, (mem, mem))
     cpu = REQUEST["timeout_s"] + 2
     resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))
@@ -83,7 +95,23 @@ def _inside_read_roots(path):
         real = os.path.realpath(path)
     except Exception:  # noqa: BLE001
         return False
-    return real == os.devnull or any(real == r or real.startswith(r + os.sep) for r in _READ_ROOTS)
+    if real == os.devnull or any(real == r or real.startswith(r + os.sep) for r in _READ_ROOTS):
+        return True
+    return _is_cpu_info(real)
+
+
+# Read-only CPU/thread probes that joblib (loky cpu_count) and threadpoolctl make on Linux.
+# Without them scikit-learn models fail. Nothing here holds user data or secrets.
+_PID_DIR = f"/proc/{os.getpid()}"
+_CPU_INFO_EXACT = {"/proc/cpuinfo", "/proc/stat", f"{_PID_DIR}/maps", f"{_PID_DIR}/status"}
+
+
+def _is_cpu_info(real):
+    if real in _CPU_INFO_EXACT:
+        return True
+    if real.startswith("/sys/devices/system/cpu/"):
+        return True
+    return real.startswith("/sys/fs/cgroup/") and os.path.basename(real).startswith("cpu")
 
 
 def _audit(event, args):

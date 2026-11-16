@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -18,6 +19,7 @@ import pandas as pd
 
 from app.analysis.python_guard import ALLOWED_IMPORTS, PythonCheck, PythonRejected, validate_python
 
+logger = logging.getLogger(__name__)
 RUNNER = Path(__file__).with_name("sandbox_runner.py")
 TIMEOUT_S = 25  # overridden from settings at run time; module values remain the defaults used by tests
 MEMORY_MB = 1024
@@ -121,6 +123,7 @@ def run_python(code: str, df: pd.DataFrame, extra_frames: dict[str, pd.DataFrame
         result_file = workdir / "result.json"
         if not result_file.exists():
             tail = proc.stderr.decode("utf-8", "replace")[-300:]
+            logger.warning("python sandbox exited %s without a result: %s", proc.returncode, tail[-200:])
             if "MemoryError" in tail or proc.returncode in (-9, 137):
                 raise PythonExecutionError("The analysis ran out of memory and was stopped.")
             raise PythonExecutionError("The analysis process stopped unexpectedly.")
